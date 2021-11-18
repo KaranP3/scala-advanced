@@ -2,7 +2,7 @@ package lectures.part3concurrency
 
 import java.util.concurrent.Executors
 
-object Intro extends App {
+object JVMConcurrencyIntro extends App {
   /*
   interface Runnable {
     public void run()
