@@ -1,12 +1,13 @@
 package lectures.part3concurrency
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.{Failure, Random, Success}
+import scala.concurrent.duration._
 
 // important for futures
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object FuturesPromises extends App{
+object FuturesPromises extends App {
 
   def calculateMeaningOfLife: Int = {
     Thread.sleep(2000)
@@ -41,9 +42,7 @@ object FuturesPromises extends App{
       "fb.id.2-bill" -> "Bill",
       "fb.id.0-dummy" -> "dummy"
     )
-    val friends = Map(
-      "fb.id.1-zuck" -> "fb.id.2-bill"
-    )
+    val friends = Map("fb.id.1-zuck" -> "fb.id.2-bill")
 
     val random = new Random()
 
@@ -95,18 +94,86 @@ object FuturesPromises extends App{
 
   // fallbacks
   val aProfileNoMatterWhat =
-    SocialNetwork.fetchProfile("unknown id").recover{
+    SocialNetwork.fetchProfile("unknown id").recover {
       case _: Throwable => Profile("fb.id.0-dummy", "Forever alone")
     }
 
   val aFetchedProfileNoMatterWhat =
-    SocialNetwork.fetchProfile("unknown id").recoverWith{
+    SocialNetwork.fetchProfile("unknown id").recoverWith {
       case _: Throwable => SocialNetwork.fetchProfile("fb.id.0-dummy")
     }
 
   val fallbackResult =
-    SocialNetwork.fetchProfile("unknown id")
+    SocialNetwork
+      .fetchProfile("unknown id")
       .fallbackTo(SocialNetwork.fetchProfile("fb.id.0-dummy"))
 
+  // online banking app
+  case class User(name: String)
+  case class Transaction(sender: String,
+                         receiver: String,
+                         amount: Double,
+                         status: String)
 
+  object BankingApp {
+    val name = "Demo banking"
+
+    def fetchUser(name: String): Future[User] = Future {
+      Thread.sleep(500)
+      User(name)
+    }
+
+    def createTransaction(user: User,
+                          merchantName: String,
+                          amount: Double): Future[Transaction] = Future {
+      // simulate some process
+      Thread.sleep(1000)
+      Transaction(user.name, merchantName, amount, "SUCCESS")
+    }
+
+    def purchase(username: String,
+                 item: String,
+                 merchantName: String,
+                 cost: Double): String = {
+      // fetch the user from the DB
+      // create a transaction
+      // WAIT for the transaction to finish
+      val transactionStatusFuture = for {
+        user <- fetchUser(username)
+        transaction <- createTransaction(user, merchantName, cost)
+      } yield transaction.status
+
+      // blocking
+      Await.result(transactionStatusFuture, 2.seconds) // implicit conversions -> pimp my library
+      // second param will throw an exception on timeout
+    }
+  }
+
+  println(
+    BankingApp
+      .purchase("Karan", "iPhone 12", "Future Store", 3000)
+  )
+
+  // promises
+  val promise = Promise[Int]() // "controller" over a future
+  val future = promise.future
+
+  // thread 1 - "consumer"
+  future.onComplete{
+    case Success(r) => println(s"[consumer] I have received $r")
+  }
+
+  // thread 2 - "producer"
+  val producer = new Thread(() => {
+    println("[producer] crunching numbers...")
+    Thread.sleep(500)
+    // fulfilling the promise
+    promise.success(42)
+
+//    promise.failure(throw new RuntimeException)
+    println("[producer] done")
+  })
+
+  producer.start()
+  Thread.sleep(1000)
 }
