@@ -40,7 +40,7 @@ object TypeClasses extends App {
     def serialize(value: T): String
   }
 
-  object UserSerializer extends HtmlSerializer[User] {
+  implicit object UserSerializer extends HtmlSerializer[User] {
     override def serialize(user: User): String =
       s"<div>${user.name} (${user.age} yo) <a href='${user.email}'/></div>"
   }
@@ -63,21 +63,54 @@ object TypeClasses extends App {
     def action(value: T): String
   }
 
+  object MyTypeClassTemplate {
+    def apply[T](implicit instance: MyTypeClassTemplate[T]): MyTypeClassTemplate[T] = instance
+  }
+
   /*
   Equality
    */
   trait Equal[T] {
-    def equal(a: T, b: T): Boolean
+    def apply(a: T, b: T): Boolean
   }
 
-  object NameEquality extends Equal[User] {
-    override def equal(a: User, b: User): Boolean = a.name == b.name
+  implicit object NameEquality extends Equal[User] {
+    override def apply(a: User, b: User): Boolean = a.name == b.name
   }
 
   object FullEquality extends Equal[User] {
-    override def equal(a: User, b: User): Boolean =
+    override def apply(a: User, b: User): Boolean =
       (a.name == b.name) && (a.email == b.email)
   }
 
+  // part 2
+  object HtmlSerializer {
+    def serialize[T](value: T)(implicit serializer: HtmlSerializer[T]): String =
+      serializer.serialize(value)
 
+    def apply[T](implicit serializer: HtmlSerializer[T]): HtmlSerializer[T] = serializer
+  }
+
+  implicit object IntSerializer extends HtmlSerializer[Int] {
+    override def serialize(value: Int): String = s"<div>$value</div>"
+  }
+
+  val karan = User("karan", 28, "karan@email.com")
+
+  println(HtmlSerializer.serialize(2))
+  println(HtmlSerializer.serialize(karan))
+
+  // access to the entire type class interface
+  println(HtmlSerializer[User].serialize(karan))
+
+  /*
+  Exercise: implement the type class pattern for the equality type class
+   */
+  object Equal {
+    def apply[T](a: T, b: T)(implicit equalizer: Equal[T]): Boolean = equalizer.apply(a, b)
+  }
+
+  val anotherKaran = User("karan", 28, "karan@email.com")
+  println(Equal(karan, anotherKaran))
+  // AD-HOC polymorphism
 }
