@@ -98,4 +98,71 @@ object Variance extends App {
     - method arguments are in contravariant position
     - return types are in covariant position
    */
+
+  /**
+   * 1. Invariant, covariant, and contravariant
+   *  Parking[T](things: List[T]) {
+   *      park(vehicle: T)
+   *      impound(vehicles: List[T])
+   *      checkVehicles(conditions: String): List[T]
+   *  }
+   *
+   *  2. used someone else's API: IList[T]
+   *  3. parking = monad!
+   *    - flatMap
+   */
+  class Vehicle
+  class Bike extends Vehicle
+  class Car extends Vehicle
+
+  class IList[T]
+
+  // invariant
+  class Parking[T](things: List[T]) {
+    def park(vehicle: T): Unit = println("parking...")
+    def impound(vehicles: List[T]): Unit = println("impounding...")
+    def checkVehicles(condition: String): List[T] = List[T]()
+
+    def flatMap[S](f: T => Parking[S]): Parking[S] =
+      new Parking[S](List[S]())
+  }
+
+  class CovariantParking[+T](things: List[T]) {
+    def park[S >: T](vehicle: S): Unit = println("parking...")
+    def impound[S >: T](vehicles: List[S]): Unit = println("impounding...")
+    def checkVehicles(condition: String): List[T] = List[T]()
+
+    def flatMap[S](f: T => CovariantParking[S]): CovariantParking[S] =
+      new CovariantParking[S](List[S]())
+  }
+
+  class ContravariantParking[-T](things: List[T]) {
+    def park(vehicle: T): Unit = println("parking...")
+    def impound(vehicles: List[T]): Unit = println("impounding...")
+    def checkVehicles[S <: T](condition: String): List[S] = List[S]()
+
+    def flatMap[R <: T, S](f: R => ContravariantParking[S]): ContravariantParking[S] =
+      new ContravariantParking[S](List[S]())
+  }
+
+  /*
+    Rule of thumb
+      - use covariance = COLLECTION OF THINGS
+      - use contravariance = GROUP OF ACTIONS
+   */
+
+  // exercise 2
+  class CovariantParking2[+T](things: IList[T]) {
+    def park[S >: T](vehicle: S): Unit = println("parking...")
+    def impound[S >: T](vehicles: IList[S]): Unit = println("impounding...")
+    def checkVehicles[S >: T](condition: String): IList[S] = new IList[S]
+  }
+
+  class ContravariantParking2[-T](things: IList[T]) {
+    def park(vehicle: T): Unit = println("parking...")
+    def impound[S <: T](vehicles: IList[S]): Unit = println("impounding...")
+    def checkVehicles[S <: T](condition: String): IList[S] = new IList[S]
+  }
+
+  // flatMap (added to first impl)
 }
